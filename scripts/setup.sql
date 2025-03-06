@@ -1,0 +1,73 @@
+/*-----------------------------------------------------------------------------
+Setup Script for NOAA Database
+-----------------------------------------------------------------------------*/
+
+SET MY_USER = CURRENT_USER();
+
+SET MY_USER = CURRENT_USER();
+SET GITHUB_SECRET_USERNAME = 'username';
+SET GITHUB_SECRET_PASSWORD = 'personal access token';
+SET GITHUB_URL_PREFIX = 'https://github.com/username';
+SET GITHUB_REPO_ORIGIN = 'https://github.com/username/sfguide-data-engineering-with-notebooks.git';
+
+-- ----------------------------------------------------------------------------
+-- Create the account-level objects (ACCOUNTADMIN part)
+-- ----------------------------------------------------------------------------
+USE ROLE ACCOUNTADMIN;
+
+-- Roles
+CREATE OR REPLACE ROLE NOAA_ROLE;
+GRANT ROLE NOAA_ROLE TO ROLE SYSADMIN;
+GRANT ROLE NOAA_ROLE TO USER IDENTIFIER($MY_USER);
+
+GRANT CREATE INTEGRATION ON ACCOUNT TO ROLE NOAA_ROLE;
+GRANT EXECUTE TASK ON ACCOUNT TO ROLE NOAA_ROLE;
+GRANT EXECUTE MANAGED TASK ON ACCOUNT TO ROLE NOAA_ROLE;
+GRANT MONITOR EXECUTION ON ACCOUNT TO ROLE NOAA_ROLE;
+GRANT IMPORTED PRIVILEGES ON DATABASE SNOWFLAKE TO ROLE NOAA_ROLE;
+
+-- Databases
+CREATE OR REPLACE DATABASE NOAA_DB;
+GRANT OWNERSHIP ON DATABASE NOAA_DB TO ROLE NOAA_ROLE;
+
+-- Warehouses
+CREATE OR REPLACE WAREHOUSE NOAA_WH WAREHOUSE_SIZE = XSMALL, AUTO_SUSPEND = 300, AUTO_RESUME = TRUE;
+GRANT OWNERSHIP ON WAREHOUSE NOAA_WH TO ROLE NOAA_ROLE;
+
+-- ----------------------------------------------------------------------------
+-- Create the database-level objects
+-- ----------------------------------------------------------------------------
+USE ROLE NOAA_ROLE;
+USE WAREHOUSE NOAA_WH;
+USE DATABASE NOAA_DB;
+
+-- Schemas
+CREATE OR REPLACE SCHEMA INTEGRATIONS;
+CREATE OR REPLACE SCHEMA DEV_SCHEMA;
+CREATE OR REPLACE SCHEMA PROD_SCHEMA;
+
+USE SCHEMA INTEGRATIONS;
+
+-- External Storage Integration
+CREATE OR REPLACE STORAGE INTEGRATION NOAA_S3_INTEGRATION
+  TYPE = EXTERNAL_STAGE
+  STORAGE_PROVIDER = 'S3'
+  ENABLED = TRUE
+  STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::699475925561:role/snowflake_s3_role'
+  STORAGE_ALLOWED_LOCATIONS = ('s3://noaaclimatedata/weatherData/');
+
+GRANT USAGE ON INTEGRATION NOAA_S3_INTEGRATION TO ROLE NOAA_ROLE;
+GRANT USAGE ON SCHEMA INTEGRATIONS TO ROLE NOAA_ROLE;
+GRANT ALL PRIVILEGES ON SCHEMA NOAA_DB.INTEGRATIONS TO ROLE NOAA_ROLE;
+
+-- ----------------------------------------------------------------------------
+-- Create the event table
+-- ----------------------------------------------------------------------------
+USE ROLE ACCOUNTADMIN;
+
+CREATE EVENT TABLE NOAA_DB.INTEGRATIONS.NOAA_EVENTS;
+GRANT SELECT ON EVENT TABLE NOAA_DB.INTEGRATIONS.NOAA_EVENTS TO ROLE NOAA_ROLE;
+GRANT INSERT ON EVENT TABLE NOAA_DB.INTEGRATIONS.NOAA_EVENTS TO ROLE NOAA_ROLE;
+
+ALTER ACCOUNT SET EVENT_TABLE = NOAA_DB.INTEGRATIONS.NOAA_EVENTS;
+ALTER DATABASE NOAA_DB SET LOG_LEVEL = INFO;
