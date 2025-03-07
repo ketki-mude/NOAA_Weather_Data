@@ -8,9 +8,9 @@ CREATE OR REPLACE NOTEBOOK IDENTIFIER('"NOAA_DB"."{{env}}_SCHEMA"."{{env}}_05_lo
 ALTER NOTEBOOK "NOAA_DB"."{{env}}_SCHEMA"."{{env}}_05_load_csv_snowflake" ADD LIVE VERSION FROM LAST;
 
 CREATE OR REPLACE NOTEBOOK IDENTIFIER('"NOAA_DB"."{{env}}_SCHEMA"."{{env}}_06_harmonize_data"')
-    FROM '@"NOAA_DB"."INTEGRATIONS"."DEMO_GIT_REPO"/branches/"{{branch}}"/notebooks/07_harmonize_data/'
+    FROM '@"NOAA_DB"."INTEGRATIONS"."DEMO_GIT_REPO"/branches/"{{branch}}"/notebooks/06_harmonize_data/'
     QUERY_WAREHOUSE = 'NOAA_WH'
-    MAIN_FILE = '07_harmonize_data.ipynb';
+    MAIN_FILE = '06_harmonize_data.ipynb';
 
 ALTER NOTEBOOK "NOAA_DB"."{{env}}_SCHEMA"."{{env}}_07_harmonize_data" ADD LIVE VERSION FROM LAST;
 
